@@ -4,7 +4,7 @@ import edu.wpi.first.wpilibj.TimedRobot;
 
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
-
+import frc.robot.Conveyer.ConveyerState;
 import edu.wpi.first.wpilibj.shuffleboard.*;
 
 /**
@@ -439,89 +439,116 @@ public class Robot extends TimedRobot {
 	 * Ball Control
 	 * 
 	 **********************************************************/
-	void ballControl()
-	{
-		//Grabber Deploy Retract
-		if (controller.grabberDeployRetract() == true) {
+	private void ballControl() {
+		boolean grabberDeployRetract;
+		boolean horizontalPistonDeployRetract;
+		boolean hailMary;
+		boolean shooterEnable;
+		boolean trenchShot;
+		ConveyerState horizontalBeltState;
+		ConveyerState verticalBeltState;
+		Grabber.GrabberDirection grabberDirection;
+		
+		
+		// Get setting from Xbox & Joystick controllers
+		grabberDeployRetract          = controller.grabberDeployRetract();
+		grabberDirection              = controller.getGrabberDir();
+		horizontalPistonDeployRetract = controller.getForwardingPressed();
+		horizontalBeltState           = controller.getHorizonalBeltState();
+		verticalBeltState             = controller.getVerticalBeltState();
+		hailMary                      = controller.hailMary();
+		shooterEnable                 = controller.enableShooter();
+		trenchShot                    = controller.enableTrenchShot();
+		
+		
+		/*****   Grabber Deploy Retract   *****/
+		if (grabberDeployRetract == true) {
 			grabber.deployRetract();
 		}
+		
+		
+		/******   Grabber motor Forward, Reverse or OFF   *****/
+		/******   Allows the grabber to be on when shooter on   *****/
+		grabber.grabberDirection(grabberDirection);
 
-		//Grabber and Horizontal Conveyer Forward Reverse Off
-		Grabber.GrabberDirection grabberDirection = controller.getGrabberDir();
 
+        /*****   Horizontal Conveyer Piston Deploy/Retract   *****/
+		/*****   Grabber collecting balls always retract piston   *****/
 		if (grabberDirection == Grabber.GrabberDirection.FORWARD) {
-			// Grabber forward, Auto conveyor code
-			grabber.grabberDirection(grabberDirection);
-
 			conveyer.forwardingRetract();
-
-			conveyer.autoHorizontalControl();
-			conveyer.autoVerticalControl();
 		}
-		else if (grabberDirection == Grabber.GrabberDirection.REVERSE) {
-			// Grabber Reverse, Manual conveyor control
-			grabber.grabberDirection(grabberDirection);
-
-			if (controller.getForwardingPressed() == true) {
+		//  Shooter shooting balls always retract piston
+		else if (shooterEnable == true)  {
+			conveyer.forwardingRetract();
+		}
+		//  Not grabbing or shooting balls allow piston deploy/retract
+		else  {
+	        if (horizontalPistonDeployRetract == true) {
 				conveyer.changeForwardingState();
 			}
-
-			conveyer.manualHorizontalControl(controller.getHorizonalBeltState());
-			conveyer.manualVerticalControl(  controller.getVerticalBeltState() );
-		}
-		else {
-			// Grabber Off, Manual conveyor code
-			grabber.grabberDirection(grabberDirection);
-
-			if (controller.getForwardingPressed() == true) {
-				conveyer.changeForwardingState();
-			}
-
-			conveyer.manualHorizontalControl(controller.getHorizonalBeltState());
-			conveyer.manualVerticalControl(  controller.getVerticalBeltState() );
 		}
 
-		// Shooter On and Off
-		boolean hailMary      = controller.hailMary();
-		boolean shooterEnable = controller.enableShooter();
-		boolean trenchShot    = controller.enableTrenchShot();
-
+		
+		/*****   Shooter Control   *****/
 		if (shooterEnable == true) {
-			if (backupVerticalCount < 5) {
-				backupVerticalCount++;
-				conveyer.autoVerticalDown();
+			if (hailMary == true) {
+				shooter.manualShooterControl( Shooter.ShootLocation.HAIL_MARY );
+			}
+			else if (trenchShot == true) {
+				shooter.manualShooterControl( Shooter.ShootLocation.TRENCH );
 			}
 			else {
-				if (hailMary == true) {
-					// Sets Shooter to Full Power (Hail Mary Pass)
-					shooter.manualShooterControl( Shooter.ShootLocation.HAIL_MARY );
-				}
-				else if (trenchShot == true) {
-					// Sets Shooter to 0.7 Power (21 Feet)
-					shooter.manualShooterControl( Shooter.ShootLocation.TRENCH );
-				}
-				else {
-					// Sets Shooter to 0.65 Power (10 Feet)
-					shooter.manualShooterControl( Shooter.ShootLocation.TEN_FOOT );
-				}
+				shooter.manualShooterControl( Shooter.ShootLocation.TEN_FOOT );
+			}
+		}
+		else  {
+			shooter.manualShooterControl( Shooter.ShootLocation.OFF );
+		}
 
+
+		/*****   Conveyer Control   *****/
+		// Can't have grabber & shooter on at same time
+		if ((grabberDirection == Grabber.GrabberDirection.FORWARD)  &&
+		    (shooterEnable    == false))  {
+			conveyer.autoHorizontalControl();
+			conveyer.autoVerticalControl();
+			backupVerticalCount = 0;
+		}
+		else if ((grabberDirection == Grabber.GrabberDirection.REVERSE)  &&
+        		 (shooterEnable    == false))  {
+			conveyer.manualHorizontalControl(horizontalBeltState);
+			conveyer.manualVerticalControl(verticalBeltState);
+			backupVerticalCount = 0;
+		}
+		else if ((grabberDirection == Grabber.GrabberDirection.OFF)  &&
+		         (shooterEnable    == true)) {
+			// reverse the verticle conveyer to prevent the ball from 
+			// jamming the shooter when it turns on
+			if (backupVerticalCount < 5) {
+				conveyer.manualHorizontalControl(Conveyer.ConveyerState.OFF);
+				conveyer.autoVerticalDown();
+				backupVerticalCount++;
+			}
+			else {
 				// Waits for Shooter to Get Up to Speed
 				if ( shooter.shooterReady() == true ) {
 					// Shooter at required RPM, Turn Conveyers On
 					conveyer.manualHorizontalControl(Conveyer.ConveyerState.FORWARD);
-					conveyer.manualVerticalControl(  Conveyer.ConveyerState.FORWARD);
+					conveyer.manualVerticalControl(Conveyer.ConveyerState.FORWARD);
 				}
 				else {
 					// Shooter below required RPM, Turn Conveyers Off
 					conveyer.manualHorizontalControl(Conveyer.ConveyerState.OFF);
-					conveyer.manualVerticalControl(  Conveyer.ConveyerState.OFF);
+					conveyer.manualVerticalControl(Conveyer.ConveyerState.OFF);
 				}
 			}
 		}
-		else {
+		else  {
+			conveyer.manualHorizontalControl(Conveyer.ConveyerState.OFF);
+			conveyer.manualVerticalControl(Conveyer.ConveyerState.OFF);
 			backupVerticalCount = 0;
-			shooter.manualShooterControl( Shooter.ShootLocation.OFF );
 		}
 	}
+
 
 } //End of the Robot Class
