@@ -220,88 +220,8 @@ public class Robot extends TimedRobot {
 		/*****************************************************************
 		 *     BALL MOVEMENT
 		 *****************************************************************/
-		//Grabber Deploy Retract
-		if (controller.grabberDeployRetract() == true) {
-			grabber.deployRetract();
-		}
-
-		//Grabber and Horizontal Conveyer Forward Reverse Off
-		Grabber.GrabberDirection grabberDirection = controller.getGrabberDir();
-
-		if (grabberDirection == Grabber.GrabberDirection.FORWARD) {
-			// Grabber forward, Auto conveyor code
-			grabber.grabberDirection(grabberDirection);
-
-			conveyer.forwardingRetract();
-
-			conveyer.autoHorizontalControl();
-			conveyer.autoVerticalControl();
-		}
-		else if (grabberDirection == Grabber.GrabberDirection.REVERSE) {
-			// Grabber Reverse, Manual conveyor control
-			grabber.grabberDirection(grabberDirection);
-
-			if (controller.getForwardingPressed() == true) {
-				conveyer.changeForwardingState();
-			}
-
-			conveyer.manualHorizontalControl(controller.getHorizonalBeltState());
-			conveyer.manualVerticalControl(  controller.getVerticalBeltState() );
-		}
-		else {
-			// Grabber Off, Manual conveyor code
-			grabber.grabberDirection(grabberDirection);
-
-			if (controller.getForwardingPressed() == true) {
-				conveyer.changeForwardingState();
-			}
-
-			conveyer.manualHorizontalControl(controller.getHorizonalBeltState());
-			conveyer.manualVerticalControl(  controller.getVerticalBeltState() );
-		}
-
-		// Shooter On and Off
-		boolean hailMary      = controller.hailMary();
-		boolean shooterEnable = controller.enableShooter();
-		boolean trenchShot    = controller.enableTrenchShot();
-
-		if (shooterEnable == true) {
-			if (backupVerticalCount < 5) {
-				backupVerticalCount++;
-				conveyer.autoVerticalDown();
-			}
-			else {
-				if (hailMary == true) {
-					// Sets Shooter to Full Power (Hail Mary Pass)
-					shooter.manualShooterControl( Shooter.ShootLocation.HAIL_MARY );
-				}
-				else if (trenchShot == true) {
-					// Sets Shooter to 0.7 Power (21 Feet)
-					shooter.manualShooterControl( Shooter.ShootLocation.TRENCH );
-				}
-				else {
-					// Sets Shooter to 0.65 Power (10 Feet)
-					shooter.manualShooterControl( Shooter.ShootLocation.TEN_FOOT );
-				}
-
-				// Waits for Shooter to Get Up to Speed
-				if ( shooter.shooterReady() == true ) {
-					// Shooter at required RPM, Turn Conveyers On
-					conveyer.manualHorizontalControl(Conveyer.ConveyerState.FORWARD);
-					conveyer.manualVerticalControl(  Conveyer.ConveyerState.FORWARD);
-				}
-				else {
-					// Shooter below required RPM, Turn Conveyers Off
-					conveyer.manualHorizontalControl(Conveyer.ConveyerState.OFF);
-					conveyer.manualVerticalControl(  Conveyer.ConveyerState.OFF);
-				}
-			}
-		}
-		else {
-			backupVerticalCount = 0;
-			shooter.manualShooterControl( Shooter.ShootLocation.OFF );
-		}
-
+		ballControl();
+		
 		/*****************************************************************
 		 *     WHEELS CONTROL
 		 *****************************************************************/
@@ -510,6 +430,97 @@ public class Robot extends TimedRobot {
 			else {
 				colorWheel.rotateColorWheel( 0.0 );
 			}
+		}
+	}
+
+
+	/**********************************************************
+	 * 
+	 * Ball Control
+	 * 
+	 **********************************************************/
+	void ballControl()
+	{
+		//Grabber Deploy Retract
+		if (controller.grabberDeployRetract() == true) {
+			grabber.deployRetract();
+		}
+
+		//Grabber and Horizontal Conveyer Forward Reverse Off
+		Grabber.GrabberDirection grabberDirection = controller.getGrabberDir();
+
+		if (grabberDirection == Grabber.GrabberDirection.FORWARD) {
+			// Grabber forward, Auto conveyor code
+			grabber.grabberDirection(grabberDirection);
+
+			conveyer.forwardingRetract();
+
+			conveyer.autoHorizontalControl();
+			conveyer.autoVerticalControl();
+		}
+		else if (grabberDirection == Grabber.GrabberDirection.REVERSE) {
+			// Grabber Reverse, Manual conveyor control
+			grabber.grabberDirection(grabberDirection);
+
+			if (controller.getForwardingPressed() == true) {
+				conveyer.changeForwardingState();
+			}
+
+			conveyer.manualHorizontalControl(controller.getHorizonalBeltState());
+			conveyer.manualVerticalControl(  controller.getVerticalBeltState() );
+		}
+		else {
+			// Grabber Off, Manual conveyor code
+			grabber.grabberDirection(grabberDirection);
+
+			if (controller.getForwardingPressed() == true) {
+				conveyer.changeForwardingState();
+			}
+
+			conveyer.manualHorizontalControl(controller.getHorizonalBeltState());
+			conveyer.manualVerticalControl(  controller.getVerticalBeltState() );
+		}
+
+		// Shooter On and Off
+		boolean hailMary      = controller.hailMary();
+		boolean shooterEnable = controller.enableShooter();
+		boolean trenchShot    = controller.enableTrenchShot();
+
+		if (shooterEnable == true) {
+			if (backupVerticalCount < 5) {
+				backupVerticalCount++;
+				conveyer.autoVerticalDown();
+			}
+			else {
+				if (hailMary == true) {
+					// Sets Shooter to Full Power (Hail Mary Pass)
+					shooter.manualShooterControl( Shooter.ShootLocation.HAIL_MARY );
+				}
+				else if (trenchShot == true) {
+					// Sets Shooter to 0.7 Power (21 Feet)
+					shooter.manualShooterControl( Shooter.ShootLocation.TRENCH );
+				}
+				else {
+					// Sets Shooter to 0.65 Power (10 Feet)
+					shooter.manualShooterControl( Shooter.ShootLocation.TEN_FOOT );
+				}
+
+				// Waits for Shooter to Get Up to Speed
+				if ( shooter.shooterReady() == true ) {
+					// Shooter at required RPM, Turn Conveyers On
+					conveyer.manualHorizontalControl(Conveyer.ConveyerState.FORWARD);
+					conveyer.manualVerticalControl(  Conveyer.ConveyerState.FORWARD);
+				}
+				else {
+					// Shooter below required RPM, Turn Conveyers Off
+					conveyer.manualHorizontalControl(Conveyer.ConveyerState.OFF);
+					conveyer.manualVerticalControl(  Conveyer.ConveyerState.OFF);
+				}
+			}
+		}
+		else {
+			backupVerticalCount = 0;
+			shooter.manualShooterControl( Shooter.ShootLocation.OFF );
 		}
 	}
 
